@@ -1,12 +1,18 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import Header from "./components/Header";
 import ProtectedRoute from "./components/ProtectedRoute";
+import FloatingActionButton from "./components/FloatingActionButton";
+import NotificationContainer from "./components/NotificationContainer";
+import DebugUser from "./components/DebugUser";
+import { NotificationProvider, useNotificationContext } from "./context/NotificationContext";
 import TaskList from "./pages/tasks/TaskList";
 import TaskForm from "./pages/tasks/TaskForm";
 import TaskDetail from "./pages/tasks/TaskDetail";
 import Login from "./pages/Login";
 
-const App = () => {
+const AppContent = () => {
+  const { notifications, removeNotification } = useNotificationContext();
+
   return (
     <div className="App">
       <Header />
@@ -73,7 +79,27 @@ const App = () => {
           />
         </Routes>
       </div>
+      
+      {/* Botón flotante para agregar tareas (solo para profesores) */}
+      <FloatingActionButton />
+      
+      {/* Sistema de notificaciones */}
+      <NotificationContainer 
+        notifications={notifications} 
+        onRemove={removeNotification} 
+      />
+      
+      {/* Debug component - REMOVER EN PRODUCCIÓN */}
+      <DebugUser />
     </div>
+  );
+};
+
+const App = () => {
+  return (
+    <NotificationProvider>
+      <AppContent />
+    </NotificationProvider>
   );
 };
 

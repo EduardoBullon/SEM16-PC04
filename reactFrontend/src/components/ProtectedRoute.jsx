@@ -12,10 +12,10 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
 
   // Si se requiere un rol específico y el usuario no lo tiene
   if (requiredRole) {
-    // Permitir equivalentes de profesor
+    // Permitir equivalentes de profesor (PROFESSOR es el rol correcto del backend)
     if (
       requiredRole === "TEACHER" &&
-      !["TEACHER", "PROFESSOR", "professor"].includes(user?.role)
+      !["PROFESSOR"].includes(user?.role)
     ) {
       return <Navigate to="/unauthorized" replace />;
     }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
+import { useNotificationContext } from "../../context/NotificationContext";
 import { getTasks, deleteTask } from "../../services/task.service";
 
 const TaskList = () => {
@@ -9,6 +10,7 @@ const TaskList = () => {
   const user = useAuthStore((state) => state.user);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { showSuccess, showError } = useNotificationContext();
 
   useEffect(() => {
     if (!token || !user) {
@@ -25,6 +27,7 @@ const TaskList = () => {
       setTasks(data);
     } catch (error) {
       console.error("Error al cargar tareas:", error);
+      showError("Error al cargar las tareas");
     } finally {
       setLoading(false);
     }
@@ -34,13 +37,15 @@ const TaskList = () => {
     if (!window.confirm("¿Estás seguro de eliminar esta tarea?")) return;
     try {
       await deleteTask(id);
+      showSuccess("Tarea eliminada correctamente");
       loadTasks();
     } catch (err) {
       console.error("Error al eliminar tarea:", err);
+      showError("Error al eliminar la tarea");
     }
   };
 
-  const isProfessor = user?.role === "TEACHER" || user?.role === "professor";
+  const isProfessor = user?.role === "PROFESSOR";
 
   const getStatusColor = (dueDate) => {
     const now = new Date();

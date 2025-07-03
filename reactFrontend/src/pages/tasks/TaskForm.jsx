@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useNotificationContext } from "../../context/NotificationContext";
 import {
   createTask,
   getTaskById,
@@ -11,24 +12,29 @@ const TaskForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  const { showSuccess, showError } = useNotificationContext();
 
   const [form, setForm] = useState({
     title: "",
     description: "",
     publicationDate: "",
     dueDate: "",
+    status: "ACTIVE",
+    maxGrade: 20.0,
   });
 
-  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const isEdit = Boolean(id);
 
   useEffect(() => {
-    if (!user || (user.role !== "TEACHER" && user.role !== "professor")) {
+    // Validar que el usuario sea profesor
+    if (!user || user.role !== "PROFESSOR") {
+      showError("No tienes permisos para crear o editar tareas");
       navigate("/tasks");
+      return;
     }
-  }, [user, navigate]);
+  }, [user, navigate, showError]);
 
   useEffect(() => {
     if (isEdit) {
@@ -40,50 +46,87 @@ const TaskForm = () => {
             description: data.description,
             publicationDate: data.publicationDate.slice(0, 16),
             dueDate: data.dueDate.slice(0, 16),
+            status: data.status || "ACTIVE",
+            maxGrade: data.maxGrade || 20.0,
           });
         })
         .catch((err) => {
           console.error("Error al cargar tarea:", err);
+          showError("Error al cargar la tarea para editar");
           navigate("/tasks");
         })
         .finally(() => {
           setLoading(false);
         });
     }
-  }, [id, isEdit, navigate]);
+  }, [id, isEdit, navigate, showError]);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    if (error) setError(null);
+    const { name, value } = e.target;
+    setForm({ 
+      ...form, 
+      [name]: name === 'maxGrade' ? parseFloat(value) || 0 : value 
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
     setLoading(true);
 
-    const payload = {
-      ...form,
-      publicationDate: new Date(form.publicationDate),
-      dueDate: new Date(form.dueDate),
-    };
-
     try {
+      // Validar fechas
+      const publicationDate = new Date(form.publicationDate);
+      const dueDate = new Date(form.dueDate);
+      const now = new Date();
+
+      if (publicationDate < now) {
+        showError("La fecha de publicación no puede ser anterior a la fecha actual");
+        setLoading(false);
+        return;
+      }
+
+      if (dueDate <= publicationDate) {
+        showError("La fecha de vencimiento debe ser posterior a la fecha de publicación");
+        setLoading(false);
+        return;
+      }
+
+      // Validar nota máxima
+      if (form.maxGrade < 0 || form.maxGrade > 20) {
+        showError("La nota máxima debe estar entre 0 y 20");
+        setLoading(false);
+        return;
+      }
+
+      const payload = {
+        ...form,
+        publicationDate: publicationDate,
+        dueDate: dueDate,
+      };
+
       if (isEdit) {
         await updateTask(id, payload);
+        showSuccess("Tarea actualizada correctamente");
       } else {
         await createTask(payload);
+        showSuccess("Tarea creada correctamente");
       }
-      navigate("/tasks");
+      
+      // Navegar después de un breve delay para que se vea la notificación
+      setTimeout(() => {
+        navigate("/tasks");
+      }, 1000);
+      
     } catch (err) {
       console.error("Error al guardar tarea:", err);
-      setError("Ocurrió un error al guardar la tarea");
+      const errorMessage = err.message || "Ocurrió un error al guardar la tarea";
+      showError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
+  if (loading && isEdit) {
     return (
       <div style={{
         display: 'flex',
@@ -126,29 +169,6 @@ const TaskForm = () => {
       </div>
 
       <div className="form-modern">
-        {/* Mensaje de error */}
-        {error && (
-          <div className="alert-modern alert-danger-modern" style={{ marginBottom: '2rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span>⚠️</span>
-              <span>{error}</span>
-            </div>
-            <button 
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--danger-color)',
-                cursor: 'pointer',
-                fontSize: '1.2rem',
-                marginLeft: 'auto'
-              }}
-              onClick={() => setError(null)}
-            >
-              ×
-            </button>
-          </div>
-        )}
-
         {/* Formulario */}
         <form onSubmit={handleSubmit}>
           <div style={{
@@ -172,6 +192,7 @@ const TaskForm = () => {
                   maxLength={200}
                   placeholder="Ej: Análisis de algoritmos de búsqueda"
                   style={{ width: '100%' }}
+                  disabled={loading}
                 />
                 <div style={{
                   fontSize: '0.8rem',
@@ -198,7 +219,35 @@ const TaskForm = () => {
                     minHeight: '120px',
                     resize: 'vertical'
                   }}
+                  disabled={loading}
                 />
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label className="form-label-modern">
+                  🏆 Nota Máxima
+                </label>
+                <input
+                  type="number"
+                  name="maxGrade"
+                  className="form-control-modern"
+                  value={form.maxGrade}
+                  onChange={handleChange}
+                  required
+                  min="0"
+                  max="20"
+                  step="0.1"
+                  placeholder="20.0"
+                  style={{ width: '100%' }}
+                  disabled={loading}
+                />
+                <div style={{
+                  fontSize: '0.8rem',
+                  color: 'var(--text-secondary)',
+                  marginTop: '0.25rem'
+                }}>
+                  Puntuación máxima de la tarea (0-20)
+                </div>
               </div>
             </div>
 
@@ -216,6 +265,7 @@ const TaskForm = () => {
                   onChange={handleChange}
                   required
                   style={{ width: '100%' }}
+                  disabled={loading}
                 />
                 <div style={{
                   fontSize: '0.8rem',
@@ -226,7 +276,7 @@ const TaskForm = () => {
                 </div>
               </div>
 
-              <div style={{ marginBottom: '2rem' }}>
+              <div style={{ marginBottom: '1.5rem' }}>
                 <label className="form-label-modern">
                   ⏰ Fecha de Vencimiento
                 </label>
@@ -238,6 +288,7 @@ const TaskForm = () => {
                   onChange={handleChange}
                   required
                   style={{ width: '100%' }}
+                  disabled={loading}
                 />
                 <div style={{
                   fontSize: '0.8rem',
@@ -245,6 +296,32 @@ const TaskForm = () => {
                   marginTop: '0.25rem'
                 }}>
                   Fecha límite para entregar la tarea
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '2rem' }}>
+                <label className="form-label-modern">
+                  📊 Estado de la Tarea
+                </label>
+                <select
+                  name="status"
+                  className="form-control-modern"
+                  value={form.status}
+                  onChange={handleChange}
+                  required
+                  style={{ width: '100%' }}
+                  disabled={loading}
+                >
+                  <option value="ACTIVE">🟢 Activa</option>
+                  <option value="INACTIVE">🔴 Inactiva</option>
+                  <option value="DRAFT">📝 Borrador</option>
+                </select>
+                <div style={{
+                  fontSize: '0.8rem',
+                  color: 'var(--text-secondary)',
+                  marginTop: '0.25rem'
+                }}>
+                  Estado actual de la tarea
                 </div>
               </div>
 

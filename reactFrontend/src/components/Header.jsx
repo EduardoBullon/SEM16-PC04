@@ -1,19 +1,25 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 
 const Header = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
   const getRoleDisplayName = (role) => {
     const roleNames = {
       ADMIN: "👨‍💼 Administrador",
-      TEACHER: "👨‍🏫 Profesor",
+      PROFESSOR: "👨‍🏫 Profesor",
       STUDENT: "👨‍🎓 Estudiante"
     };
     return roleNames[role] || role;
@@ -22,11 +28,13 @@ const Header = () => {
   const getRoleColor = (role) => {
     const roleColors = {
       ADMIN: "var(--danger-color)",
-      TEACHER: "var(--warning-color)",
+      PROFESSOR: "var(--warning-color)",
       STUDENT: "var(--success-color)"
     };
     return roleColors[role] || "var(--text-secondary)";
   };
+
+  const isProfessor = user?.role === "PROFESSOR";
 
   return (
     <nav className="modern-header">
@@ -59,6 +67,17 @@ const Header = () => {
                 📚 Tareas
               </button>
               
+              {/* Botón de Agregar Tarea para Profesores */}
+              {isProfessor && (
+                <button
+                  className="btn-modern btn-primary-modern"
+                  onClick={() => navigate("/tasks/new")}
+                  style={{ fontSize: '0.9rem' }}
+                >
+                  ✨ Nueva Tarea
+                </button>
+              )}
+              
               {user.role === "ADMIN" && (
                 <button
                   className="btn-modern btn-outline-modern"
@@ -69,7 +88,7 @@ const Header = () => {
                 </button>
               )}
               
-              {user.role === "TEACHER" && (
+              {isProfessor && (
                 <button
                   className="btn-modern btn-outline-modern"
                   onClick={() => navigate("/submissions")}
@@ -90,17 +109,21 @@ const Header = () => {
             
             {/* Perfil del usuario */}
             <div style={{ position: 'relative' }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem',
-                padding: '0.5rem 1rem',
-                background: 'rgba(255, 255, 255, 0.1)',
-                borderRadius: '12px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease'
-              }}>
+              <div 
+                onClick={toggleDropdown}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  padding: '0.5rem 1rem',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  transform: isDropdownOpen ? 'scale(1.02)' : 'scale(1)'
+                }}
+              >
                 <div style={{
                   width: '40px',
                   height: '40px',
@@ -137,7 +160,9 @@ const Header = () => {
                   display: 'flex', 
                   flexDirection: 'column', 
                   gap: '2px',
-                  marginLeft: '0.5rem'
+                  marginLeft: '0.5rem',
+                  transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.3s ease'
                 }}>
                   <div style={{
                     width: '4px',
@@ -174,14 +199,17 @@ const Header = () => {
                 padding: '0.5rem',
                 minWidth: '200px',
                 zIndex: 1000,
-                opacity: 0,
-                visibility: 'hidden',
-                transform: 'translateY(-10px)',
+                opacity: isDropdownOpen ? 1 : 0,
+                visibility: isDropdownOpen ? 'visible' : 'hidden',
+                transform: isDropdownOpen ? 'translateY(0)' : 'translateY(-10px)',
                 transition: 'all 0.3s ease'
               }} className="dropdown-menu-modern">
                 <button
                   className="dropdown-item-modern"
-                  onClick={() => navigate("/profile")}
+                  onClick={() => {
+                    navigate("/profile");
+                    setIsDropdownOpen(false);
+                  }}
                   style={{ width: '100%', textAlign: 'left' }}
                 >
                   👤 Mi Perfil
@@ -193,7 +221,10 @@ const Header = () => {
                 }} />
                 <button
                   className="dropdown-item-modern"
-                  onClick={handleLogout}
+                  onClick={() => {
+                    handleLogout();
+                    setIsDropdownOpen(false);
+                  }}
                   style={{ width: '100%', textAlign: 'left' }}
                 >
                   🚪 Cerrar sesión
@@ -203,6 +234,21 @@ const Header = () => {
           </div>
         )}
       </div>
+      
+      {/* Overlay para cerrar dropdown al hacer clic fuera */}
+      {isDropdownOpen && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 999
+          }}
+          onClick={() => setIsDropdownOpen(false)}
+        />
+      )}
     </nav>
   );
 };
