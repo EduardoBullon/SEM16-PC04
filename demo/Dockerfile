@@ -1,14 +1,26 @@
-
-FROM maven:3.9.4-eclipse-temurin-17 AS build
+# Etapa 1: Build del frontend (React)
+FROM node:20 AS frontend-build
 WORKDIR /app
-COPY pom.xml .
-COPY src ./src
-ENV MAVEN_OPTS="-Dfile.encoding=UTF-8"
+COPY ../reactFrontend/package*.json ./
+RUN npm install
+COPY ../reactFrontend .
+RUN npm run build
+
+# Etapa 2: Build del backend (Spring Boot)
+FROM maven:3.9.6-eclipse-temurin-21 AS backend-build
+WORKDIR /app
+COPY . .
 RUN mvn clean package -DskipTests
 
-
-FROM eclipse-temurin:17-jre
+# Etapa 3: Imagen final
+FROM eclipse-temurin:21-jre
 WORKDIR /app
-COPY --from=build /app/target/demo-0.0.1-SNAPSHOT.jar app.jar
+
+# Copia el JAR del backend
+COPY --from=backend-build /app/target/*.jar app.jar
+
+# Copia el build del frontend al directorio estático de Spring Boot
+COPY --from=frontend-build /app/dist /app/static
+
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+CMD ["java", "-jar", "app.jar"]

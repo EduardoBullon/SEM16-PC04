@@ -248,3 +248,56 @@ Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) par
 ---
 
 **🎓 Academia Digital** - Transformando la educación con tecnología moderna 
+
+# Despliegue en Render (Todo en Uno)
+
+## 🚀 Pasos para desplegar Backend + Frontend en Render
+
+### 1. Crear base de datos Postgres en Render
+- Ve a **+ New → Postgres**
+- Guarda la URL, usuario y contraseña
+
+### 2. Configura el Web Service
+- **Root Directory / Build Context:** `demo`
+- **Dockerfile Path:** `Dockerfile`
+
+### 3. Variables de entorno necesarias
+Agrega en Render (Web Service → Environment):
+
+| Key                      | Value (ejemplo)                                  |
+|--------------------------|--------------------------------------------------|
+| DATABASE_URL             | (URL de Render, empieza con postgres://...)      |
+| DATABASE_USERNAME        | (usuario de la base de datos)                    |
+| DATABASE_PASSWORD        | (contraseña de la base de datos)                 |
+| JWT_SECRET               | (elige una clave secreta segura)                 |
+| JWT_EXPIRATION           | 86400                                            |
+| CORS_ORIGINS             | https://*.onrender.com,https://*.railway.app     |
+| PORT                     | 8080                                             |
+
+### 4. Haz commit y push de los cambios
+```bash
+git add demo/Dockerfile demo/src/main/resources/application.properties README.md
+git commit -m "deploy: configuración todo en uno para Render"
+git push
+```
+
+### 5. Crea el Web Service en Render
+- Selecciona el repo y rama
+- Usa el contexto y Dockerfile como arriba
+- Agrega las variables de entorno
+- Crea el servicio y espera el build
+
+### 6. Accede a la URL pública
+- El backend y el frontend estarán disponibles en la misma URL
+- El backend servirá el frontend automáticamente
+
+---
+
+## ⚠️ Notas
+- Si necesitas migraciones automáticas, asegúrate de que `spring.jpa.hibernate.ddl-auto=update` esté configurado.
+- Si usas otro proveedor de base de datos, ajusta la URL y el dialecto.
+- Si necesitas exponer más variables de entorno, agrégalas en Render.
+
+---
+
+# Proyecto SEM16-PC04 
